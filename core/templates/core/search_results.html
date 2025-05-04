@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Search Results - Chatterbox{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Search Results for "{{ query }}"</h2>
+    {% if posts %}
+        {% for post in posts %}
+            <!-- Same post display as in home.html -->
+            {% include 'core/post_card.html' with post=post %}
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">No posts found matching your search.</div>
+    {% endif %}
+</div>
+{% endblock %}
