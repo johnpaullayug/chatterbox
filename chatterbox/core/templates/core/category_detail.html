@@ -1,0 +1,485 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ category.name }} - Chatterbox{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Posts in {{ category.name }}</h2>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="categoryFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-filter"></i> Sort: <span id="current-category-sort">Newest</span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="categoryFilterDropdown">
+                    <li><a class="dropdown-item category-sort-option" href="#" data-sort="newest"><i class="bi bi-arrow-up"></i> Newest</a></li>
+                    <li><a class="dropdown-item category-sort-option" href="#" data-sort="oldest"><i class="bi bi-arrow-down"></i> Oldest</a></li>
+                    <li><a class="dropdown-item category-sort-option" href="#" data-sort="top"><i class="bi bi-arrow-up-circle"></i> Top</a></li>
+                    <li><a class="dropdown-item category-sort-option" href="#" data-sort="controversial"><i class="bi bi-fire"></i> Controversial</a></li>
+                    <li><a class="dropdown-item category-sort-option" href="#" data-sort="hot"><i class="bi bi-thermometer-high"></i> Hot</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="input-group">
+                <input type="text" 
+                       id="categoryPostSearch" 
+                       class="form-control" 
+                       placeholder="Search posts in {{ category.name }}..." 
+                       autocomplete="off"
+                       data-category-id="{{ category.id }}">
+                <button class="btn btn-primary" type="button" id="categorySearchButton">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div id="categoryPostResults" class="list-group mt-1" style="display: none;"></div>
+        </div>
+        
+        <!-- Posts Container -->
+        <div id="postsContainer">
+            {% for post in page_obj %}
+            <div class="card mb-3 shadow-sm post-card" 
+                 id="post-{{ post.id }}" 
+                 data-post-title="{{ post.title|lower }}" 
+                 data-post-content="{{ post.content|lower }}"
+                 data-post-author="{{ post.author.username|lower }}"
+                 data-created="{{ post.created_at|date:'U' }}"
+                 data-votes="{{ post.vote_score }}"
+                 data-upvotes="{{ post.upvotes.count }}"
+                 data-downvotes="{{ post.downvotes.count }}">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="vote-section text-center me-3">
+                            <form class="vote-form" action="{% url 'vote_post' post.id 'up' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link p-0 border-0 bg-transparent">
+                                    <i class="bi bi-hand-thumbs-up {% if request.user in post.upvotes.all %}text-success{% endif %}"></i>
+                                </button>
+                            </form>
+                            <div class="my-1 vote-count">{{ post.vote_score }}</div>
+                            <form class="vote-form" action="{% url 'vote_post' post.id 'down' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link p-0 border-0 bg-transparent">
+                                    <i class="bi bi-hand-thumbs-down {% if request.user in post.downvotes.all %}text-danger{% endif %}"></i>
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">
+                                <a href="{% url 'post_detail' post.id %}" class="text-decoration-none">{{ post.title }}</a>
+                            </h5>
+                            <p class="card-text text-muted small mb-2">
+                                Posted by <a href="{% url 'user_profile' post.author.username %}" class="text-decoration-none">{{ post.author.username }}</a>
+                                <span title="{{ post.created_at }}">{{ post.created_at|timesince }} ago</span>
+                            </p>
+                            <p class="card-text mb-2">{{ post.content|truncatewords:50 }}</p>
+                            <div class="d-flex align-items-center">
+                                <a href="{% url 'post_detail' post.id %}" class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="bi bi-chat"></i> {{ post.comments.count }} comment{{ post.comments.count|pluralize }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-emoji-frown fs-1 text-muted"></i>
+                    <h4 class="mt-3">
+                        {% if request.GET.q %}
+                        No posts found matching "{{ request.GET.q }}"
+                        {% else %}
+                        No posts in this category yet
+                        {% endif %}
+                    </h4>
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'create_post' %}?category={{ category.id }}" class="btn btn-primary mt-3">
+                        <i class="bi bi-plus-circle"></i> Create the first post
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+   
+        {% if page_obj.paginator.count > 0 %}
+            {% include 'core/pagination.html' %}
+        {% endif %}
+    </div>
+
+    <!-- Sidebar Column -->
+    <div class="col-lg-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-info-circle"></i> About {{ category.name }}
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ category.description|default:"No description available." }}</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-house"></i> Back to Home
+                    </a>
+                    {% if request.user.is_authenticated %}
+                    <a href="{% url 'create_post' %}?category={{ category.id }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Post in {{ category.name }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Category-specific filters -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-funnel"></i> Filter Posts
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">By Date</label>
+                    <select class="form-select" id="dateFilter">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">By Vote Count</label>
+                    <select class="form-select" id="voteFilter">
+                        <option value="all">All Votes</option>
+                        <option value="positive">Positive Only (10+ votes)</option>
+                        <option value="negative">Negative Only (-10+ votes)</option>
+                        <option value="controversial">Controversial (mixed votes)</option>
+                    </select>
+                </div>
+                <button id="applyFilters" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel-fill"></i> Apply Filters
+                </button>
+                <button id="resetFilters" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize elements
+    const searchInput = document.getElementById('categoryPostSearch');
+    const searchButton = document.getElementById('categorySearchButton');
+    const resultsContainer = document.getElementById('categoryPostResults');
+    const postsContainer = document.getElementById('postsContainer');
+    const categoryId = searchInput.dataset.categoryId;
+    const sortOptions = document.querySelectorAll('.category-sort-option');
+    const currentSortDisplay = document.getElementById('current-category-sort');
+    const dateFilter = document.getElementById('dateFilter');
+    const voteFilter = document.getElementById('voteFilter');
+    const applyFiltersBtn = document.getElementById('applyFilters');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    let timeoutId;
+
+    // Initialize Bootstrap dropdown
+    const categoryFilterDropdown = new bootstrap.Dropdown(document.getElementById('categoryFilterDropdown'));
+
+    // Function to show/hide empty state
+    function updateEmptyState() {
+        const visiblePosts = postsContainer.querySelectorAll('.post-card:not([style*="display: none"])');
+        const emptyState = document.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.style.display = visiblePosts.length === 0 ? 'block' : 'none';
+        }
+    }
+
+    // Function to filter posts by search term
+    function filterPostsBySearch() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const postCards = postsContainer.querySelectorAll('.post-card');
+        
+        postCards.forEach(card => {
+            const title = card.dataset.postTitle;
+            const content = card.dataset.postContent;
+            const author = card.dataset.postAuthor;
+            
+            if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm) || author.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        updateEmptyState();
+    }
+
+    // Function to apply all filters
+    function applyAllFilters() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const dateValue = dateFilter.value;
+        const voteValue = voteFilter.value;
+        const now = Math.floor(Date.now() / 1000);
+        const postCards = postsContainer.querySelectorAll('.post-card');
+        
+        postCards.forEach(card => {
+            // Search filter
+            const title = card.dataset.postTitle;
+            const content = card.dataset.postContent;
+            const author = card.dataset.postAuthor;
+            let matchesSearch = searchTerm === '' || 
+                              title.includes(searchTerm) || 
+                              content.includes(searchTerm) || 
+                              author.includes(searchTerm);
+            
+            // Date filter
+            const postDate = parseInt(card.dataset.created);
+            let matchesDate = true;
+            
+            if (dateValue !== 'all') {
+                const ageInSeconds = now - postDate;
+                
+                switch(dateValue) {
+                    case 'today': matchesDate = ageInSeconds <= 86400; break;
+                    case 'week': matchesDate = ageInSeconds <= 604800; break;
+                    case 'month': matchesDate = ageInSeconds <= 2592000; break;
+                    case 'year': matchesDate = ageInSeconds <= 31536000; break;
+                }
+            }
+            
+            // Vote filter
+            const votes = parseInt(card.dataset.votes);
+            const upvotes = parseInt(card.dataset.upvotes);
+            const downvotes = parseInt(card.dataset.downvotes);
+            let matchesVote = true;
+            
+            if (voteValue !== 'all') {
+                switch(voteValue) {
+                    case 'positive': matchesVote = votes >= 10; break;
+                    case 'negative': matchesVote = votes <= -10; break;
+                    case 'controversial': matchesVote = upvotes >= 5 && downvotes >= 5; break;
+                }
+            }
+            
+            // Apply all filters
+            card.style.display = (matchesSearch && matchesDate && matchesVote) ? 'block' : 'none';
+        });
+        
+        updateEmptyState();
+    }
+
+    // Function to sort posts
+    function sortPosts(method) {
+        const visiblePosts = Array.from(postsContainer.querySelectorAll('.post-card[style="display: block"], .post-card:not([style])'));
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (visiblePosts.length === 0) return;
+        
+        visiblePosts.sort((a, b) => {
+            switch(method) {
+                case 'newest':
+                    return parseInt(b.dataset.created) - parseInt(a.dataset.created);
+                case 'oldest':
+                    return parseInt(a.dataset.created) - parseInt(b.dataset.created);
+                case 'top':
+                    return parseInt(b.dataset.votes) - parseInt(a.dataset.votes);
+                case 'controversial':
+                    const aContro = Math.min(parseInt(a.dataset.upvotes), parseInt(a.dataset.downvotes));
+                    const bContro = Math.min(parseInt(b.dataset.upvotes), parseInt(b.dataset.downvotes));
+                    return bContro - aContro;
+                case 'hot':
+                    const aAge = (now - parseInt(a.dataset.created)) / 3600;
+                    const bAge = (now - parseInt(b.dataset.created)) / 3600;
+                    const aScore = parseInt(a.dataset.votes) / Math.pow(aAge + 2, 1.8);
+                    const bScore = parseInt(b.dataset.votes) / Math.pow(bAge + 2, 1.8);
+                    return bScore - aScore;
+                default:
+                    return 0;
+            }
+        });
+        
+        // Re-append sorted posts
+        visiblePosts.forEach(post => postsContainer.appendChild(post));
+    }
+
+    // Autocomplete functionality
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        timeoutId = setTimeout(function() {
+            // Simulate API call - replace with actual fetch to your endpoint
+            const mockResults = [
+                {id: 1, title: "Sample Post 1", content: "This is a sample post content...", author: "user1"},
+                {id: 2, title: "Example Post 2", content: "Another example post content...", author: "user2"}
+            ];
+            
+            const filteredResults = mockResults.filter(item => 
+                item.title.toLowerCase().includes(query.toLowerCase()) || 
+                item.content.toLowerCase().includes(query.toLowerCase()) ||
+                item.author.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            if (filteredResults.length > 0) {
+                resultsContainer.innerHTML = '';
+                filteredResults.forEach(item => {
+                    const resultItem = document.createElement('a');
+                    resultItem.href = `/post/${item.id}/`;
+                    resultItem.className = 'list-group-item list-group-item-action';
+                    resultItem.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${item.title}</h6>
+                            <small>by ${item.author}</small>
+                        </div>
+                        <p class="mb-1">${item.content.substring(0, 50)}...</p>
+                    `;
+                    resultsContainer.appendChild(resultItem);
+                });
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContainer.style.display = 'none';
+            }
+        }, 300);
+    });
+
+    // Hide results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Event listeners for sorting
+    sortOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentSortDisplay.textContent = this.textContent.trim();
+            sortPosts(this.dataset.sort);
+        });
+    });
+
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(filterPostsBySearch, 300);
+    });
+
+    searchButton.addEventListener('click', filterPostsBySearch);
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') filterPostsBySearch();
+    });
+
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(filterPostsBySearch, 300);
+    });
+
+    searchButton.addEventListener('click', filterPostsBySearch);
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') filterPostsBySearch();
+    });
+
+    // Filter buttons
+    applyFiltersBtn.addEventListener('click', applyAllFilters);
+    resetFiltersBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        dateFilter.value = 'all';
+        voteFilter.value = 'all';
+        applyAllFilters();
+    });
+
+    // Autocomplete with API (optional)
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        timeoutId = setTimeout(() => {
+            fetch(`/api/posts/autocomplete/?category=${categoryId}&q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        resultsContainer.innerHTML = '';
+                        data.results.forEach(post => {
+                            const resultItem = document.createElement('a');
+                            resultItem.href = `/post/${post.id}/`;
+                            resultItem.className = 'list-group-item list-group-item-action';
+                            resultItem.innerHTML = `
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">${post.title}</h6>
+                                </div>
+                                <p class="mb-1">${post.content.substring(0, 50)}...</p>
+                                <small>Posted by ${post.author}</small>
+                            `;
+                            resultsContainer.appendChild(resultItem);
+                        });
+                        resultsContainer.style.display = 'block';
+                    } else {
+                        resultsContainer.style.display = 'none';
+                    }
+                });
+        }, 300);
+    });
+
+    // Hide results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && 
+            !resultsContainer.contains(e.target) && 
+            !searchButton.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Initialize with newest sort
+    sortPosts('newest');
+});
+</script>
+<style>
+/* CSS for the dropdown and posts */
+.dropdown-toggle::after {
+    margin-left: 0.5em;
+}
+.category-sort-option i {
+    margin-right: 0.5em;
+    width: 1.2em;
+    text-align: center;
+}
+.post-card {
+    transition: transform 0.2s;
+}
+.post-card:hover {
+    transform: translateY(-2px);
+}
+.vote-section {
+    min-width: 40px;
+}
+.vote-form button {
+    outline: none !important;
+    box-shadow: none !important;
+}
+#categoryPostResults {
+    position: absolute;
+    z-index: 1000;
+    width: calc(56% - 30px);
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,.125);
+    border-radius: 0.25rem;
+}
+#categoryPostResults a:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

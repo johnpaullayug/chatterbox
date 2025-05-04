@@ -1,0 +1,29 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Delete Comment - Chatterbox{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                Confirm Comment Deletion
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete this comment?</p>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p>{{ comment.content }}</p>
+                        <small class="text-muted">Posted by {{ comment.author.username }}</small>
+                    </div>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <a href="{% url 'post_detail' comment.post.pk %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
