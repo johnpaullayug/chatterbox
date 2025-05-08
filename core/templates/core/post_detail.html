@@ -5,6 +5,7 @@
 {% block content %}
 <div class="row">
     <div class="col-md-8">
+        <!-- Post content remains the same -->
         <div class="card mb-4">
             <div class="card-body">
                 <div class="d-flex">
@@ -43,7 +44,8 @@
                 </div>
             </div>
         </div>
-        <!-- Delete Confirmation Modal -->
+        
+        <!-- Delete Modal remains the same -->
         <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -64,6 +66,8 @@
                 </div>
             </div>
         </div>   
+        
+        <!-- Comments Section -->
         <div class="card mb-4">
             <div class="card-header bg-light">
                 <h5 class="mb-0">Comments ({{ post.comments.count }})</h5>
@@ -104,6 +108,28 @@
                         </div>
                         <p>{{ comment.content }}</p>
                         
+                        <!-- Reaction buttons and count -->
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="reaction-buttons me-2">
+                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ comment.id }}" data-reaction="like">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                </button>
+                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ comment.id }}" data-reaction="love">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ comment.id }}" data-reaction="haha">
+                                    <i class="bi bi-emoji-laughing"></i>
+                                </button>
+                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ comment.id }}" data-reaction="sad">
+                                    <i class="bi bi-emoji-frown"></i>
+                                </button>
+                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ comment.id }}" data-reaction="angry">
+                                    <i class="bi bi-emoji-angry"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted reaction-count" data-comment-id="{{ comment.id }}">0 reactions</small>
+                        </div>
+                        
                         <div class="d-flex">
                             <a href="{% url 'reply_comment' comment.id %}" class="btn btn-sm btn-outline-primary me-2">
                                 <i class="bi bi-reply"></i> Reply
@@ -121,7 +147,7 @@
                         
                         <!-- Replies to this comment -->
                         {% for reply in comment.replies.all %}
-                        <div class="card mt-3">
+                        <div class="card mt-3" id="reply-{{ reply.id }}">
                             <div class="card-body">
                                 <div class="d-flex">
                                     <div class="flex-shrink-0 me-3">
@@ -141,6 +167,28 @@
                                         </div>
                                         <p>{{ reply.content }}</p>
                                         
+                                        <!-- Reaction buttons and count for replies -->
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="reaction-buttons me-2">
+                                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ reply.id }}" data-reaction="like">
+                                                    <i class="bi bi-hand-thumbs-up"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ reply.id }}" data-reaction="love">
+                                                    <i class="bi bi-heart"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ reply.id }}" data-reaction="haha">
+                                                    <i class="bi bi-emoji-laughing"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ reply.id }}" data-reaction="sad">
+                                                    <i class="bi bi-emoji-frown"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-reaction" data-comment-id="{{ reply.id }}" data-reaction="angry">
+                                                    <i class="bi bi-emoji-angry"></i>
+                                                </button>
+                                            </div>
+                                            <small class="text-muted reaction-count" data-comment-id="{{ reply.id }}">0 reactions</small>
+                                        </div>
+                                        
                                         {% if request.user == reply.author %}
                                         <div class="d-flex">
                                             <a href="{% url 'edit_comment' reply.id %}" class="btn btn-sm btn-outline-secondary me-2">
@@ -156,6 +204,7 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Delete Reply Modal -->
                         <div class="modal fade" id="deleteCommentModal{{ reply.id }}" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -208,6 +257,7 @@
         {% endfor %}
     </div>
     
+    <!-- Sidebar remains the same -->
     <div class="col-md-4">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
@@ -234,4 +284,208 @@
         </div>
     </div>
 </div>
-{% endblock %} 
+
+<!-- Reaction Popover Template -->
+<div id="reactionPopoverTemplate" style="display: none;">
+    <div class="reaction-popover p-2 bg-white rounded shadow-sm">
+        <div class="d-flex justify-content-around">
+            <button class="btn p-0 reaction-option" data-reaction="like" title="Like">
+                <i class="bi bi-hand-thumbs-up-fill text-primary fs-4"></i>
+            </button>
+            <button class="btn p-0 reaction-option" data-reaction="love" title="Love">
+                <i class="bi bi-heart-fill text-danger fs-4"></i>
+            </button>
+            <button class="btn p-0 reaction-option" data-reaction="haha" title="Haha">
+                <i class="bi bi-emoji-laughing-fill text-warning fs-4"></i>
+            </button>
+            <button class="btn p-0 reaction-option" data-reaction="sad" title="Sad">
+                <i class="bi bi-emoji-frown-fill text-warning fs-4"></i>
+            </button>
+            <button class="btn p-0 reaction-option" data-reaction="angry" title="Angry">
+                <i class="bi bi-emoji-angry-fill text-danger fs-4"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Reaction styles */
+    .reaction-buttons {
+        display: none; /* Initially hidden, shown on hover */
+        transition: all 0.3s ease;
+    }
+    
+    .comment-container:hover .reaction-buttons,
+    .reply-container:hover .reaction-buttons {
+        display: block;
+    }
+    
+    .btn-reaction {
+        padding: 0.1rem 0.3rem;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .btn-reaction:hover {
+        transform: scale(1.2);
+        color: #0d6efd;
+    }
+    
+    .reaction-popover {
+        position: absolute;
+        z-index: 1000;
+        transform: translateY(-40px);
+    }
+    
+    .reaction-option {
+        transition: all 0.2s;
+        margin: 0 2px;
+    }
+    
+    .reaction-option:hover {
+        transform: scale(1.5) translateY(-5px);
+    }
+    
+    /* Active reaction */
+    .active-reaction-like { color: #0d6efd !important; }
+    .active-reaction-love { color: #dc3545 !important; }
+    .active-reaction-haha { color: #ffc107 !important; }
+    .active-reaction-wow { color: #ffc107 !important; }
+    .active-reaction-sad { color: #ffc107 !important; }
+    .active-reaction-angry { color: #ff2f00 !important; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Store user reactions (in a real app, this would come from the server)
+    const userReactions = {};
+    
+    // Initialize all comment and reply containers
+    document.querySelectorAll('.card-body').forEach(container => {
+        container.classList.add(container.closest('.card').id.startsWith('reply-') ? 'reply-container' : 'comment-container');
+    });
+    
+    // Reaction button functionality
+    document.querySelectorAll('.btn-reaction').forEach(button => {
+        const commentId = button.dataset.commentId;
+        const reactionType = button.dataset.reaction;
+        
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle reaction
+            if (userReactions[commentId] === reactionType) {
+                // Remove reaction
+                delete userReactions[commentId];
+                button.classList.remove(`active-reaction-${reactionType}`);
+            } else {
+                // Add new reaction
+                userReactions[commentId] = reactionType;
+                
+                // Remove any existing active class
+                document.querySelectorAll(`[data-comment-id="${commentId}"].btn-reaction`).forEach(btn => {
+                    btn.classList.remove(...btn.classList.toString().split(' ').filter(c => c.startsWith('active-reaction-')));
+                });
+                
+                // Add active class to this button
+                button.classList.add(`active-reaction-${reactionType}`);
+            }
+            
+            // Update reaction count display
+            updateReactionCount(commentId);
+        });
+    });
+    
+    // Hover effect to show reaction buttons
+    document.querySelectorAll('.comment-container, .reply-container').forEach(container => {
+        container.addEventListener('mouseenter', function() {
+            const reactionButtons = this.querySelector('.reaction-buttons');
+            if (reactionButtons) {
+                reactionButtons.style.display = 'block';
+            }
+        });
+        
+        container.addEventListener('mouseleave', function() {
+            const reactionButtons = this.querySelector('.reaction-buttons');
+            if (reactionButtons) {
+                reactionButtons.style.display = 'none';
+            }
+        });
+    });
+    
+    // Function to update reaction count display
+    function updateReactionCount(commentId) {
+        const countElement = document.querySelector(`.reaction-count[data-comment-id="${commentId}"]`);
+        if (countElement) {
+            const reactionCount = userReactions[commentId] ? 1 : 0;
+            countElement.textContent = reactionCount === 1 ? 
+                `1 reaction (${userReactions[commentId]})` : 
+                '0 reactions';
+        }
+    }
+    
+    // Reaction popover functionality
+    document.querySelectorAll('.reaction-buttons').forEach(container => {
+        const commentId = container.querySelector('.btn-reaction').dataset.commentId;
+        let popover = null;
+        
+        container.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Remove any existing popover
+            if (popover) {
+                popover.remove();
+                popover = null;
+                return;
+            }
+            
+            // Create new popover
+            const template = document.getElementById('reactionPopoverTemplate');
+            popover = template.cloneNode(true);
+            popover.style.display = 'block';
+            popover = popover.querySelector('.reaction-popover');
+            
+            // Position popover
+            container.appendChild(popover);
+            
+            // Add event listeners to reaction options
+            popover.querySelectorAll('.reaction-option').forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const reactionType = this.dataset.reaction;
+                    userReactions[commentId] = reactionType;
+                    
+                    // Update the main reaction button
+                    const mainButton = container.querySelector(`[data-reaction="${reactionType}"]`);
+                    if (mainButton) {
+                        document.querySelectorAll(`[data-comment-id="${commentId}"].btn-reaction`).forEach(btn => {
+                            btn.classList.remove(...btn.classList.toString().split(' ').filter(c => c.startsWith('active-reaction-')));
+                        });
+                        mainButton.classList.add(`active-reaction-${reactionType}`);
+                    }
+                    
+                    // Update count
+                    updateReactionCount(commentId);
+                    
+                    // Remove popover
+                    popover.remove();
+                    popover = null;
+                });
+            });
+        });
+        
+        // Close popover when clicking outside
+        document.addEventListener('click', function() {
+            if (popover) {
+                popover.remove();
+                popover = null;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
